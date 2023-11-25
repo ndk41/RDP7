@@ -1,0 +1,152 @@
+version: '3'
+
+networks:
+  traefik:
+    external: true
+
+# https://rustdesk.com/docs/en/self-host/install/
+
+services:
+  rustdesk:
+    image: rustdesk/rustdesk-server:${RUSTDESK_DOCKER_TAG:-latest}
+    container_name: ${RUSTDESK_ID_CONTAINER_NAME:-rustdesk-id-server}
+    restart: ${RUSTDESK_RESTART:-unless-stopped}
+    command: hbbs -r ${RUSTDESK_RELAY_CONTAINER_NAME:-rustdesk-relay}.${HOST_DOMAIN}:21117
+    volumes:
+      - ./etc/rustdesk:/root
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+    ports:
+      - 21115:21115
+      - 21116:21116
+      - 21116:21116/udp
+      - 21118:21118
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ}
+    depends_on:
+      - rustdesk-relay
+    labels:
+      - joyride.host.name=${RUSTDESK_CONTAINER_NAME:-rustdesk}.${HOST_DOMAIN}
+      - traefik.enable=false
+      - com.centurylinklabs.watchtower.enable=true
+      - autoheal=true
+
+  rustdesk-relay:
+    image: rustdesk/rustdesk-server:${RUSTDESK_DOCKER_TAG:-latest}
+    container_name: ${RUSTDESK_RELAY_CONTAINER_NAME:-rustdesk-relay}
+    restart: ${RUSTDESK_RESTART:-unless-stopped}
+    networks:
+      - traefik
+    ports:
+      - 21117:21117
+      - 21119:21119
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ}
+    command: hbbr
+    volumes:
+      - ./etc/rustdesk:/root
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+    labels:
+      - joyride.host.name=${RUSTDESK_RELAY_CONTAINER_NAME:-rustdesk-relay}.${HOST_DOMAIN}
+      - traefik.enable=false
+      - com.centurylinklabs.watchtower.enable=true
+      - autoheal=true
+
+credentials:
+        user:   "beef" 
+        passwd: "something unique and complex"
+restrictions:
+        permitted_hooking_subnet: ["10.1.0.0/16"]
+        permitted_ui_subnet: ["127.0.0.1/32"]
+ http:
+        debug: false # Will print verbose message in BeEF console
+        host: "0.0.0.0" # IP address of the web server
+        port: "3000" #Port of the web server
+
+        # If BeEF is running behind a reverse proxy or NAT
+        #  set the public hostname and port here & protocol
+        public:
+            host: "example.com"
+            port: "3000"
+            https: true/false
+
+        dns: "localhost" # Address of DNS server
+        hook_file: "/hook.js" # Path for hooking script
+        hook_session_name: "BEEFHOOK" #Name of session
+        session_cookie_name: "BEEFSESSION" # Name of BeEF cookie
+ web_server_imitation:
+            enable: true
+            type: "apache" # Supported: apache, iis, nginx
+            hook_404: false # inject BeEF hook in HTTP 404 responses
+            hook_root: false # inject BeEF hook in the server home page
+extension:
+        requester:
+            enable: true
+        proxy:
+            enable: true
+        metasploit:
+            enable: false
+        social_engineering:
+            enable: true
+        evasion:
+            enable: false
+        console:
+             shell:
+                enable: false
+extension:
+       admin_ui:
+              metasploit:
+                   enable: true
+  name: 'Metasploit'
+            enable: true
+            host: "127.0.0.1"
+            port: 55552
+            user: "msf"
+            pass: "<password>"
+            uri: '/api'
+            ssl: true
+            ssl_version: 'TLS1'
+            ssl_verify: true
+            callback_host: "127.0.0.1"
+            autopwn_url: "autopwn"
+load msgrpc ServerHost=127.0.0.1 User=msf Pass=<password> SSL=y
+Usage: beef [options]
+    -x, --reset                      Reset the database
+    -v, --verbose                    Display debug information
+    -a, --ascii_art                  Prints BeEF ascii art
+    -c, --config FILE                Load a different configuration file: if it's called custom-config.yaml, git automatically ignores it.
+    -p, --port PORT                  Change the default BeEF listening port
+    -w, --wsport WS_PORT             Change the default BeEF WebSocket listening port
+test:
+  adapter: mysql2
+  encoding: utf8
+  database: linkdeck_test
+  username: root
+  password: 
+  pool: 5
+  host: 127.0.0.1
+  port: 3306
+
+development:
+  adapter: mysql2
+  encoding: utf8
+  database: linkdeck_development
+  username: root
+  password: 
+  pool: 5
+  host: 127.0.0.1
+  port: 3306
+
+production:
+  adapter: mysql
+  encoding: utf8
+  database: linkdeck_production
+  username: root
+  password: 
+  host: 127.0.0.1
+  port: 3306
